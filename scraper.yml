@@ -1,0 +1,45 @@
+name: Scholarship Scraper
+
+on:
+  schedule:
+    # Runs every 5 minutes (GitHub Actions' minimum cron granularity).
+    # Note: GitHub may delay scheduled runs by a few minutes under load —
+    # this isn't guaranteed to the second.
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}  # lets you trigger a run manually from the Actions tab
+
+# Prevent overlapping runs from racing to write the state file
+concurrency:
+  group: scholarship-scraper
+  cancel-in-progress: false
+
+jobs:
+  run-scraper:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run scraper
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ADMIN_USER_ID: ${{ secrets.ADMIN_USER_ID }}
+          DESTINATION_CHANNEL: ${{ secrets.DESTINATION_CHANNEL }}
+        run: python main.py
+
+      - name: Commit updated state file
+        run: |
+          git config user.name "scholarship-scraper-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add processed_posts.json
+          git diff --cached --quiet && echo "No state changes to commit." || git commit -m "Update processed posts state [skip ci]"
+          git push
