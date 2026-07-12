@@ -133,7 +133,10 @@ def check_channels_once(processed_posts: set) -> set:
 
     for tg_chan in CHANNELS_TO_WATCH:
         try:
-            url = f"https://t.me/{tg_chan}"
+            # FIXED: plain t.me/{channel} is just an app-download landing
+            # card with no message content. The scrollable message history
+            # lives at the /s/ "instant view" preview path instead.
+            url = f"https://t.me/s/{tg_chan}"
             res = session.get(url, timeout=15)
 
             # DEBUG: log what we actually got back, so we can tell a real
