@@ -136,9 +136,16 @@ def check_channels_once(processed_posts: set) -> set:
             url = f"https://t.me/{tg_chan}"
             res = session.get(url, timeout=15)
 
+            # DEBUG: log what we actually got back, so we can tell a real
+            # empty channel apart from a blocked/rate-limited/bot-walled response.
+            logging.info(f"@{tg_chan}: HTTP {res.status_code}, {len(res.text)} bytes")
+
             # Extract text container blocks via regex patterns
             msg_blocks = re.findall(r'<div class="tgme_widget_message_text[^"]*"[^>]*>(.*?)</div>', res.text, re.DOTALL)
+            logging.info(f"@{tg_chan}: found {len(msg_blocks)} message block(s)")
             if not msg_blocks:
+                if "tgme_page_title" not in res.text and "tgme_channel_info" not in res.text:
+                    logging.warning(f"@{tg_chan}: response doesn't look like a normal t.me page — possible block/CAPTCHA/rate-limit")
                 continue
 
             latest_raw_msg = msg_blocks[-1]
